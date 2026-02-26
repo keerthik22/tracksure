@@ -12,35 +12,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Demo login function
-  const handleDemoLogin = (role) => {
-    setLoading(true);
-    // Simulate demo user data
-    const demoUser = {
-      id: `demo-${role}-${Date.now()}`,
-      email: `demo-${role}@tracksure.com`,
-      profile: {
-        id: `demo-${role}-${Date.now()}`,
-        full_name: role === 'admin' ? 'Demo Admin' : 'Demo Driver',
-        email: `demo-${role}@tracksure.com`,
-        role: role
-      }
-    };
-    
-    // Store in localStorage for demo mode
-    localStorage.setItem('demoUser', JSON.stringify(demoUser));
-    localStorage.setItem('demoMode', 'true');
-    
-    // Redirect based on role
-    setTimeout(() => {
-      if (role === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/driver/dashboard');
-      }
-    }, 500);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -67,7 +38,7 @@ export default function LoginPage() {
         setLoading(false);
       }
     } catch (err) {
-      setError('Login failed. Please try demo mode below.');
+      setError('Login failed. Please check your credentials and try again.');
       setLoading(false);
     }
   };
@@ -134,45 +105,6 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Demo Mode Section */}
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                Or try demo mode
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button
-              onClick={() => handleDemoLogin('admin')}
-              disabled={loading}
-              className="flex items-center justify-center px-4 py-3 border border-blue-300 dark:border-blue-700 rounded-lg shadow-sm text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="mr-2">👨‍💼</span>
-              Demo Admin
-            </button>
-            <button
-              onClick={() => handleDemoLogin('driver')}
-              disabled={loading}
-              className="flex items-center justify-center px-4 py-3 border border-green-300 dark:border-green-700 rounded-lg shadow-sm text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="mr-2">🚗</span>
-              Demo Driver
-            </button>
-          </div>
-
-          <div className="mt-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Demo mode uses mock data - no Supabase setup required
-            </p>
-          </div>
-        </div>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">

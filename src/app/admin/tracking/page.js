@@ -11,6 +11,7 @@ export default function LiveTracking() {
   const [selectedDriver, setSelectedDriver] = useState('');
   const [driverLocation, setDriverLocation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const router = useRouter();
 
   useEffect(() => {
@@ -170,34 +171,26 @@ export default function LiveTracking() {
               </div>
             </div>
 
-            {/* Map Placeholder (Replace with React Leaflet in production) */}
+            {/* Map View using Google Maps Embed API */}
             <div className="h-96 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-4">🗺️</div>
-                <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-2">
-                  Map View
-                </p>
-                {driverLocation ? (
-                  <div className="space-y-2">
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <span className="font-semibold">Latitude:</span> {driverLocation.latitude}
-                    </p>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <span className="font-semibold">Longitude:</span> {driverLocation.longitude}
-                    </p>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
-                      Last updated: {new Date(driverLocation.recorded_at).toLocaleString()}
-                    </p>
-                  </div>
-                ) : (
+              {driverLocation && mapsKey ? (
+                <iframe
+                  title="Driver live location"
+                  width="100%"
+                  height="100%"
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps/embed/v1/view?key=${mapsKey}&center=${driverLocation.latitude},${driverLocation.longitude}&zoom=15`}
+                />
+              ) : (
+                <div className="text-center">
+                  <div className="text-6xl mb-4">📍</div>
                   <p className="text-gray-500 dark:text-gray-400">
                     Waiting for location data...
                   </p>
-                )}
-                <p className="text-gray-400 dark:text-gray-500 text-sm mt-4">
-                  Install react-leaflet to display interactive map
-                </p>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Location Info */}

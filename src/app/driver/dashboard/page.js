@@ -15,7 +15,6 @@ export default function DriverDashboard() {
   });
   const [locationTracking, setLocationTracking] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,24 +29,6 @@ export default function DriverDashboard() {
   }, [user]);
 
   const checkAuth = async () => {
-    // Check for demo mode
-    const demoMode = typeof window !== 'undefined' && localStorage.getItem('demoMode') === 'true';
-    const demoUser = typeof window !== 'undefined' && localStorage.getItem('demoUser');
-    
-    if (demoMode && demoUser) {
-      const parsedUser = JSON.parse(demoUser);
-      if (parsedUser.profile?.role !== 'driver') {
-        router.push('/login');
-        return;
-      }
-      setUser(parsedUser);
-      setIsDemoMode(true);
-      fetchOrders(true, parsedUser);
-      setLocationTracking(true); // Simulate tracking in demo
-      return;
-    }
-
-    // Regular auth check
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.profile?.role !== 'driver') {
       router.push('/login');
@@ -56,69 +37,39 @@ export default function DriverDashboard() {
     setUser(currentUser);
   };
 
-  const fetchOrders = async (demoMode = false, demoUser = null) => {
-    if (demoMode) {
-      // Mock orders for demo
-      const mockOrders = [
-        {
-          id: 'demo-order-1',
-          pickup_address: '123 Main Street, Downtown',
-          drop_address: '456 Oak Avenue, Uptown',
-          pickup_lat: 40.7128,
-          pickup_lng: -74.0060,
-          drop_lat: 40.7589,
-          drop_lng: -73.9851,
-          driver_id: demoUser.id,
-          status: 'assigned',
-          planned_distance: 5.2,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'demo-order-2',
-          pickup_address: '789 Pine Street, Midtown',
-          drop_address: '321 Elm Road, Suburb',
-          pickup_lat: 40.7489,
-          pickup_lng: -73.9680,
-          drop_lat: 40.7614,
-          drop_lng: -73.9776,
-          driver_id: demoUser.id,
-          status: 'delivered',
-          planned_distance: 3.8,
-          created_at: new Date(Date.now() - 86400000).toISOString()
-        }
-      ];
-      setOrders(mockOrders);
-      setStats({ total: 2, delivered: 1, pending: 1 });
+  const fetchOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('driver_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching orders:', error.message || error);
+        setLoading(false);
+        return;
+      }
+
+      setOrders(data || []);
+
+      // Calculate stats
+      const total = data?.length || 0;
+      const delivered = data?.filter(o => o.status === 'delivered').length || 0;
+      const pending = data?.filter(o => o.status === 'assigned').length || 0;
+
+      setStats({ total, delivered, pending });
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('driver_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching orders:', error);
-      return;
-    }
-
-    setOrders(data || []);
-
-    // Calculate stats
-    const total = data?.length || 0;
-    const delivered = data?.filter(o => o.status === 'delivered').length || 0;
-    const pending = data?.filter(o => o.status === 'assigned').length || 0;
-
-    setStats({ total, delivered, pending });
-    setLoading(false);
   };
 
   const startLocationTracking = () => {
     if ('geolocation' in navigator) {
       setLocationTracking(true);
-      
+
       const watchId = navigator.geolocation.watchPosition(
         async (position) => {
           // Insert location into database every update
@@ -150,14 +101,8 @@ export default function DriverDashboard() {
   };
 
   const handleSignOut = async () => {
-    if (isDemoMode) {
-      localStorage.removeItem('demoUser');
-      localStorage.removeItem('demoMode');
-      router.push('/');
-    } else {
-      await signOut();
-      router.push('/');
-    }
+    await signOut();
+    router.push('/');
   };
 
   if (!user || loading) {
@@ -176,11 +121,6 @@ export default function DriverDashboard() {
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold text-blue-600">TrackSure Driver</h1>
-              {isDemoMode && (
-                <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-xs font-semibold">
-                  DEMO MODE
-                </span>
-              )}
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center gap-2">
@@ -244,7 +184,7 @@ export default function DriverDashboard() {
         {/* Orders List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">My Orders</h3>
-          
+
           {orders.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">📭</div>
@@ -263,17 +203,16 @@ export default function DriverDashboard() {
                         <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
                           Order #{order.id.substring(0, 8)}
                         </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          order.status === 'delivered' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                            : order.status === 'assigned'
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'delivered'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                          : order.status === 'assigned'
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400'
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                        }`}>
+                          }`}>
                           {order.status.toUpperCase()}
                         </span>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div>
                           <p className="text-sm text-gray-600 dark:text-gray-400">From:</p>

@@ -15,6 +15,7 @@ export default function DeliverOrder() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const router = useRouter();
   const params = useParams();
   const orderId = params.id;
@@ -281,6 +282,26 @@ export default function DeliverOrder() {
               </p>
             </div>
           </div>
+
+          {/* Drop Location Map */}
+          {mapsKey && (
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Drop Location Map
+              </label>
+              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                <iframe
+                  title="Drop location"
+                  width="100%"
+                  height="300"
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps/embed/v1/place?key=${mapsKey}&q=${order.drop_lat},${order.drop_lng}&zoom=16`}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Delivery Status */}
           <div className="mb-6">

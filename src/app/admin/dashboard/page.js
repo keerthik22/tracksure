@@ -14,7 +14,6 @@ export default function AdminDashboard() {
     totalDistance: 0
   });
   const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,46 +21,17 @@ export default function AdminDashboard() {
   }, []);
 
   const checkAuth = async () => {
-    // Check for demo mode
-    const demoMode = typeof window !== 'undefined' && localStorage.getItem('demoMode') === 'true';
-    const demoUser = typeof window !== 'undefined' && localStorage.getItem('demoUser');
-    
-    if (demoMode && demoUser) {
-      const parsedUser = JSON.parse(demoUser);
-      if (parsedUser.profile?.role !== 'admin') {
-        router.push('/login');
-        return;
-      }
-      setUser(parsedUser);
-      setIsDemoMode(true);
-      fetchStats(true);
-      return;
-    }
-
-    // Regular auth check
     const currentUser = await getCurrentUser();
     if (!currentUser || currentUser.profile?.role !== 'admin') {
       router.push('/login');
       return;
     }
     setUser(currentUser);
-    fetchStats(false);
+    fetchStats();
   };
 
-  const fetchStats = async (demoMode = false) => {
+  const fetchStats = async () => {
     try {
-      if (demoMode) {
-        // Mock data for demo mode
-        setStats({
-          totalOrders: 45,
-          deliveredOrders: 38,
-          activeDrivers: 8,
-          totalDistance: 1247.5
-        });
-        setLoading(false);
-        return;
-      }
-
       // Total Orders
       const { count: totalOrders } = await supabase
         .from('orders')
@@ -83,7 +53,7 @@ export default function AdminDashboard() {
       const { data: orders } = await supabase
         .from('orders')
         .select('planned_distance');
-      
+
       const totalDistance = orders?.reduce((sum, order) => sum + (order.planned_distance || 0), 0) || 0;
 
       setStats({
@@ -100,14 +70,8 @@ export default function AdminDashboard() {
   };
 
   const handleSignOut = async () => {
-    if (isDemoMode) {
-      localStorage.removeItem('demoUser');
-      localStorage.removeItem('demoMode');
-      router.push('/');
-    } else {
-      await signOut();
-      router.push('/');
-    }
+    await signOut();
+    router.push('/');
   };
 
   if (!user || loading) {
@@ -126,11 +90,6 @@ export default function AdminDashboard() {
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold text-blue-600">TrackSure Admin</h1>
-              {isDemoMode && (
-                <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-xs font-semibold">
-                  DEMO MODE
-                </span>
-              )}
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700 dark:text-gray-300">{user.profile?.full_name}</span>
